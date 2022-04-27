@@ -1,1 +1,7 @@
-<!-- TODO -->
+<launch>
+  <!-- Start up virtual_reset_world -->
+  <node name="virtual_reset_world_q_learning" pkg="q_learning_project"  type="virtual_reset_world.py" />
+
+  <!-- Start up q_learning -->
+  <node name="q_learning" pkg="q_learning_project"  type="q_learning.py" />
+</launch>
