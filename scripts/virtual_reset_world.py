@@ -49,7 +49,6 @@ class ResetWorld(object):
         self.run()
 
     def send_reward(self, data):
-        print(data)
         # update locations based on latest object movement
         self.current_robot_object[data.robot_object] = data.tag_id
 
@@ -73,12 +72,12 @@ class ResetWorld(object):
         reward_msg.reward = reward_amount
         reward_msg.iteration_num = self.iteration_num
         self.reward_pub.publish(reward_msg)
-        print("Published reward: ", reward_amount)
+        #print("Published reward: ", reward_amount)
 
         # increment iteration if world needs to be reset
         # reset object positions if world needs to be rest
         if reset_world:
-            print("reseting the world")
+            #print("reseting the world")
             self.iteration_num += 1
 
             for robot_object in self.current_robot_object.keys():
