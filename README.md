@@ -80,12 +80,12 @@ The robot learns which colored object should go in front of each AR tag via
 the Q-learning algorithm. We first train the robot's behavior in a simulated
 environment where a large reward is given if all three objects are in front
 of the correct tags. Each possible action in every state has an associated 
-value, and with each action the simulated robot makes, the corresponding value 
+value, and with each action that the robot takes, the corresponding value 
 is updated based on the reward received, as well as the largest value among
 the possible actions from the resulting state. The training phase consists
-of the robot taking random actions until the values have converged. When the
-training is complete, the best course of action learned by the algorithm
-involves placing the objects in front of the correct tags.
+of the robot taking random actions until all of the values have converged. 
+When the training is complete, the best course of action learned by the 
+algorithm will involve placing the objects in front of the correct tags.
 
 ### Q-learning Algorithm Description
 
@@ -104,7 +104,7 @@ callback function in `q_learning.py`, and uses the `possible_actions` and
 #### Updating the Q-matrix
 
 When the robot receives the reward for its last action, the Q-matrix entry
-corresponding to executing the last action in the previous state is updated
+corresponding to executing that action in the previous state is updated
 based on the size of the reward and the largest Q-matrix entry in the row
 corresponding to the new state. We keep track of the previous state and
 action by storing indices into `self.states` and `self.actions` respectively.
