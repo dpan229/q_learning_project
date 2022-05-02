@@ -63,3 +63,67 @@ Week 1: Implementing Q-learning
 Week 2: Library usage, vision and robot movement 
 
 Finish project end of week 2.
+
+## Writeup
+
+### Objective Description
+
+The goal of this project is to implement a behavior that allows the robot to
+figure out how to organize the objects in its environment using reinforcement
+learning. This involves implementing the Q-learning algorithm, as well as 
+elements of perception and control to allow the robot to recognize and
+manipulate other objects.
+
+### High-level Description
+
+The robot learns which colored object should go in front of each AR tag via
+the Q-learning algorithm. We first train the robot's behavior in a simulated
+environment where a large reward is given if all three objects are in front
+of the correct tags. Each possible action in every state has an associated 
+value, and with each action the simulated robot makes, the corresponding value 
+is updated based on the reward received, as well as the largest value among
+the possible actions from the resulting state. The training phase consists
+of the robot taking random actions until the values have converged. When the
+training is complete, the best course of action learned by the algorithm
+involves placing the objects in front of the correct tags.
+
+### Q-learning Algorithm Description
+
+#### Selecting and execturing actions
+
+During training, the robot chooses actions to take uniformly randomly among
+all of the possible actions in its current state. If there are no possible
+actions in the current state, the world is reset to the starting state and 
+the robot picks a random action from this state in the same way. The chosen 
+action is executed by sending a `RobotMoveObjectToTag` message to the 
+`q_learning/robot_action` topic, which is received by the `virtual_reset_world` 
+node. This component is implemented in the `QLearning.receive_reward_train` 
+callback function in `q_learning.py`, and uses the `possible_actions` and 
+`send_action` helper functions.
+
+#### Updating the Q-matrix
+
+When the robot receives the reward for its last action, the Q-matrix entry
+corresponding to executing the last action in the previous state is updated
+based on the size of the reward and the largest Q-matrix entry in the row
+corresponding to the new state. We keep track of the previous state and
+action by storing indices into `self.states` and `self.actions` respectively.
+This is also implemented in the `QLearning.receive_reward_train` callback
+function.
+
+#### Determining when to stop iterating through the Q-learning algorithm
+
+To determine when the Q-matrix has converged, after every 1000 actions we 
+compare the current Q-matrix to a copy of the old Q-matrix from 1000 actions
+ago. If the sum of the absolute values of the differences between the
+corresponding matrix elements is less than 1, then we consider the matrix 
+to have converged and end the training. This is also implemented in the
+`QLearning.receive_reward_train` callback function with some variables set up
+in the `QLearning` initialization function.
+
+#### Executing the path most likely to lead to a reward after the Q-matrix has converged
+
+After the training is complete, the optimal path is executed by always
+picking the action that has the largest associated value from the current 
+state in the Q-matrix. This is implemented in the `receive_reward_execute`
+callback function in `q_learning.py`.
