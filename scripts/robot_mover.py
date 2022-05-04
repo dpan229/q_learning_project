@@ -1,4 +1,4 @@
-import rospy, cv2, cv_bridge, 
+import rospy, cv2, cv_bridge
 import numpy as np
 
 from sensor_msgs.msg import Image, LaserScan
@@ -27,10 +27,12 @@ class RobotMover:
 
         self.current_color = -1
         self.current_tag = -1
-        self.corners = []
 
-        self.centers = []
-        self.scan = []
+        self.colored_centers = []
+        self.tag_centers = []
+        self.tag_ids = []
+        self.front_distances = [1.0 for _ in range(10)]
+        self.front_distance = 1.0
 
     def set_colored_object_centers(self, image):
 
@@ -62,7 +64,15 @@ class RobotMover:
             else:
                 centers.append((-1, -1))
 
-        self.centers = centers
+        self.colored_centers = centers
+
+    def set_tag_centers(self, image):
+        grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        corners, ids, rejected_points = cv2.aruco.detectMarkers(grayscale_image, self.aruco_dict)
+
+        self.tag_centers = [(corners[i, 0, 0] + corners[i, 0, 2]) / 2 for i in range(corners.shape[0])]
+        self.tag_ids = ids[:, 0]
 
     def image_callback(self, msg):
         if not msg.data:
@@ -76,22 +86,18 @@ class RobotMover:
 
         self.set_colored_object_centers(image)
 
-        grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-        corners, ids, rejected_points = cv2.aruco.detectMarkers(grayscale_image, self.aruco_dict)
-
-        self.corners = corners
-        self.tag_ids = ids[:, 0]
+        self.set_tag_centers(image)
 
     def scan_callback(self, data):
-        self.scan = data.ranges
+        self.front_distances = [data.ranges[0]] + self.front_distances[1:]
+        self.front_distance = np.mean(self.front_distances)
     
     def move_object(self, color_id, tag_id):
         center = self.centers[color_id]
         # go in front of object
         r = rospy.Rate(10)
-        while not (np.abs(center - self.img_width / 2) < 10 and self.scan[0] < 0.2):
-            center = self.centers[color_id]
+        while not (abs(center - self.img_width / 2) < 10 and abs(self.front_distance - 0.2) < 0.02):
+            center = self.colored_centers[color_id]
 
             if center == (-1, -1):
                 # object is not detected, rotate in place
@@ -99,7 +105,8 @@ class RobotMover:
                 ang = Vector3(0.0, 0.0, 0.3)
             else:
                 # move towards object
-                lin = Vector3(0.1, 0.0, 0.0)
+                # proportional control for forward and angle
+                lin = Vector3((self.front_distance - 0.2) * 0.1, 0.0, 0.0)
                 ang = Vector3(0.0, 0.0, (self.img_width / 2 - center[1]) * 0.5)
             twist = Twist(linear=lin, angular=ang)
             self.vel_pub.publish(twist)
@@ -109,16 +116,14 @@ class RobotMover:
         # pick up object with claw
 
         # go to the tag
-        
         center = 0
-        while not (np.abs(center - self.img_width / 2) < 10 and self.scan[0] < 0.2):
+        while not (abs(center - self.img_width / 2) < 10 and abs(self.front_distance - 0.2) < 0.02):
             try:
                 # move towards tag
-                tag_corners = self.corners[list(self.tag_ids).index(tag_id)][0]
+                tag_center = self.tag_centers[list(self.tag_ids).index(tag_id)]
 
-                center = (tag_corners[0, 0] + tag_corners[2, 0]) / 2
-
-                lin = Vector3(0.1, 0.0, 0.0)
+                # proportional control for forward and angle
+                lin = Vector3((self.front_distance - 0.2) * 0.1, 0.0, 0.0)
                 ang = Vector3(0.0, 0.0, (self.img_width / 2 - center[1]) * 0.5)
                 twist = Twist(linear=lin, angular=ang)
                 self.vel_pub.publish(twist)
@@ -144,7 +149,6 @@ class RobotMover:
         color = colors[data.robot_object]
         tag = data.tag_id
 
-        # go to colored object
         self.move_object(color, tag)
 
 
