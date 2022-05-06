@@ -13,6 +13,8 @@ from q_learning_project.msg import RobotMoveObjectToTag
 class RobotMover:
     def __init__(self):
 
+        rospy.init_node("robot_mover")
+
         self.bridge = cv_bridge.CvBridge()
 
         cv2.namedWindow("window", 1)
@@ -156,7 +158,7 @@ class RobotMover:
     def claw_grab(self):
         # controls the arm joints
         # intention: have the second arm join to move forward so that the gripper is in front of the bot
-        arm_joint_goal = [0.0, math.radians(45), 0.0, 0.0]
+        arm_joint_goal = [0.0, math.radians(45), 0.0, math.radians(45)]
         self.move_group_arm.go(arm_joint_goal, wait=True)
         rospy.sleep(3.0)
         # Calling ``stop()`` ensures that there is no residual movement
@@ -165,14 +167,14 @@ class RobotMover:
         # Controls the gripper
         # intention: close gripper onto object
         # unknown: how far the gripper is and how tight the gripper is on the object
-        gripper_joint_goal = [-0.009, 0.0009]
+        gripper_joint_goal = [-0.01, -0.01]
         self.move_group_gripper.go(gripper_joint_goal, wait=True)
         self.move_group_gripper.stop()
         rospy.sleep(3.0)
 
         # controls arm joints to move up
         # intention: have the third arm joint to move upwards 
-        arm_joint_goal = [0.0, 0.0, -math.radians(45), 0.0]
+        arm_joint_goal = [0.0, 0.0, -math.radians(90), -math.radians(90)]
         self.move_group_arm.go(arm_joint_goal, wait=True)
         rospy.sleep(3.0)
         # Calling ``stop()`` ensures that there is no residual movement
@@ -180,7 +182,7 @@ class RobotMover:
 
     def claw_open(self):
         # controls the arm joints
-        arm_joint_goal = [0.0, 0.0, 0.0, 0.0]
+        arm_joint_goal = [0.0, 0.0, math.radians(90), -math.raidans(90)]
         self.move_group_arm.go(arm_joint_goal, wait=True)
         rospy.sleep(3.0)
         # Calling ``stop()`` ensures that there is no residual movement
@@ -188,9 +190,11 @@ class RobotMover:
 
         # Controls the gripper
         # intention: open gripper
-        gripper_joint_goal = [0.0, 0.0]
+        gripper_joint_goal = [-0.009, 0.009]
         self.move_group_gripper.go(gripper_joint_goal, wait=True)
         self.move_group_gripper.stop()
+
+        # maybe have the robot back out after dropping the object
 
 
 
@@ -205,6 +209,7 @@ class RobotMover:
         tag = data.tag_id
 
         self.move_object(color, tag)
+        
 
     def run(self):
         rospy.spin()
