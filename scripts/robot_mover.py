@@ -1,8 +1,12 @@
 import rospy, cv2, cv_bridge
 import numpy as np
+# import the moveit_commander, which allows us to control the arms
+import moveit_commander
+import math
 
 from sensor_msgs.msg import Image, LaserScan
 from geometry_msgs.msg import Twist, Vector3
+from lab_f_traffic_bot.msg import Traffic
 
 from q_learning_project.msg import RobotMoveObjectToTag
 
@@ -33,6 +37,17 @@ class RobotMover:
         self.tag_ids = []
         self.front_distances = [1.0 for _ in range(10)]
         self.front_distance = 1.0
+
+        # the interface to the group of joints making up the turtlebot3
+        # openmanipulator arm
+        self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
+
+        # the interface to the group of joints making up the turtlebot3
+        # openmanipulator gripper
+        self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
+
+        # Reset arm position
+        self.move_group_arm.go([0,0,0,0], wait=True)
 
     def set_colored_object_centers(self, image):
 
@@ -113,7 +128,7 @@ class RobotMover:
 
             r.sleep()
 
-        # pick up object with claw
+        self.claw_grab()
 
         # go to the tag
         center = 0
@@ -136,7 +151,47 @@ class RobotMover:
 
             r.sleep()
 
-        # put the object down
+        self.claw_open()
+    
+    def claw_grab(self):
+        # controls the arm joints
+        # intention: have the second arm join to move forward so that the gripper is in front of the bot
+        arm_joint_goal = [0.0, math.radians(45), 0.0, 0.0]
+        self.move_group_arm.go(arm_joint_goal, wait=True)
+        rospy.sleep(3.0)
+        # Calling ``stop()`` ensures that there is no residual movement
+        self.move_group_arm.stop()
+
+        # Controls the gripper
+        # intention: close gripper onto object
+        # unknown: how far the gripper is and how tight the gripper is on the object
+        gripper_joint_goal = [-0.009, 0.0009]
+        self.move_group_gripper.go(gripper_joint_goal, wait=True)
+        self.move_group_gripper.stop()
+        rospy.sleep(3.0)
+
+        # controls arm joints to move up
+        # intention: have the third arm joint to move upwards 
+        arm_joint_goal = [0.0, 0.0, -math.radians(45), 0.0]
+        self.move_group_arm.go(arm_joint_goal, wait=True)
+        rospy.sleep(3.0)
+        # Calling ``stop()`` ensures that there is no residual movement
+        self.move_group_arm.stop()
+
+    def claw_open(self):
+        # controls the arm joints
+        arm_joint_goal = [0.0, 0.0, 0.0, 0.0]
+        self.move_group_arm.go(arm_joint_goal, wait=True)
+        rospy.sleep(3.0)
+        # Calling ``stop()`` ensures that there is no residual movement
+        self.move_group_arm.stop()
+
+        # Controls the gripper
+        # intention: open gripper
+        gripper_joint_goal = [0.0, 0.0]
+        self.move_group_gripper.go(gripper_joint_goal, wait=True)
+        self.move_group_gripper.stop()
+
 
 
     def action_callback(self, data):
@@ -151,5 +206,5 @@ class RobotMover:
 
         self.move_object(color, tag)
 
-
     def run(self):
+        rospy.spin()
