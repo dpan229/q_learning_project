@@ -61,14 +61,15 @@ class RobotMover:
         #self.move_group_arm.go([0,0,0,0], wait=True)
 
     def set_colored_object_centers(self, image):
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
         color_ranges = [
             # pink
-            (numpy.array([0, 0, 200]), numpy.array([60, 60, 255])),
+            (numpy.array([300, 128, 192]), numpy.array([340, 255, 255])),
             # green
-            (numpy.array([0, 200, 0]), numpy.array([60, 255, 60])),
+            (numpy.array([65, 128, 192]), numpy.array([105, 255, 255])),
             # blue
-            (numpy.array([200, 0, 0]), numpy.array([255, 60, 60])),
+            (numpy.array([135, 128, 192]), numpy.array([190, 255, 255])),
         ]
 
         centers = []
@@ -109,7 +110,6 @@ class RobotMover:
         self.img_width = msg.width
 
         image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-        #hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
         cv2.imshow("window", image)
         cv2.waitKey(3)
