@@ -187,7 +187,7 @@ class RobotMover:
 
         # controls arm joints to move up
         # intention: have the third arm joint to move upwards 
-        arm_joint_goal = [0.0, 0.0, -math.radians(90), -math.radians(90)]
+        arm_joint_goal = [0.0, 0.0, -math.radians(53), -math.radians(90)]
         self.move_group_arm.go(arm_joint_goal, wait=True)
         rospy.sleep(3.0)
         # Calling ``stop()`` ensures that there is no residual movement
@@ -195,7 +195,7 @@ class RobotMover:
 
     def claw_open(self):
         # controls the arm joints
-        arm_joint_goal = [0.0, 0.0, math.radians(90), -math.raidans(90)]
+        arm_joint_goal = [0.0, 0.0, math.radians(53), -math.raidans(90)]
         self.move_group_arm.go(arm_joint_goal, wait=True)
         rospy.sleep(3.0)
         # Calling ``stop()`` ensures that there is no residual movement
