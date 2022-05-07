@@ -8,7 +8,7 @@ from sensor_msgs.msg import Image, LaserScan
 from geometry_msgs.msg import Twist, Vector3
 from lab_f_traffic_bot.msg import Traffic
 
-from q_learning_project.msg import RobotMoveObjectToTag
+from q_learning_project.msg import RobotMoveObjectToTag, QLearningReward
 
 class RobotMover:
     def __init__(self):
@@ -28,6 +28,8 @@ class RobotMover:
         self.scan_sub = rospy.Subscriber('/scan', LaserScan, self.scan_callback)
 
         self.vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+
+        self.reward_pub = rospy.Publisher('q_learning/reward', QLearningReward)
 
         self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
 
@@ -209,6 +211,9 @@ class RobotMover:
         tag = data.tag_id
 
         self.move_object(color, tag)
+
+        # Signifies that the whole movement is finished
+        self.reward_pub.publish(reward = 1)
         
 
     def run(self):
