@@ -20,12 +20,7 @@ class RobotMover:
 
         self.bridge = cv_bridge.CvBridge()
 
-        cv2.namedWindow("window", 1)
-
-        self.image_sub = rospy.Subscriber('camera/rbg/image_raw',
-            Image, self.image_callback)
-
-        rospy.sleep(1.0)
+        #cv2.namedWindow("window", 1)
 
         self.action_sub = rospy.Subscriber('q_learning/robot_action', 
             RobotMoveObjectToTag, self.action_callback)
@@ -38,45 +33,52 @@ class RobotMover:
 
         self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
 
+        self.image_sub = rospy.Subscriber('camera/rgb/image_raw',
+            Image, self.image_callback)
+
         self.current_color = -1
         self.current_tag = -1
 
         self.colored_centers = [(-1, -1) for _ in range(3)]
         self.tag_centers = []
         self.tag_ids = []
-        self.front_distances = [1.0 for _ in range(5)]
+        self.front_distances = [1.0 for _ in range(1)]
         self.front_distance = 1.0
 
         self.img_width = 100
 
         # the interface to the group of joints making up the turtlebot3
         # openmanipulator arm
-        #self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
+        self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
 
         # the interface to the group of joints making up the turtlebot3
         # openmanipulator gripper
-        #self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
+        self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
 
         # Reset arm position
-        #self.move_group_arm.go([0,0,0,0], wait=True)
+        self.move_group_arm.go([0.0, 
+                                math.radians(-60.0), 
+                                math.radians(60.0),
+                                math.radians(0.0)], wait=True)
+        self.move_group_gripper.go([0.01, 0.01], wait=True)
 
     def set_colored_object_centers(self, image):
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
         color_ranges = [
             # pink
-            (numpy.array([300, 128, 192]), numpy.array([340, 255, 255])),
+            (np.array([150, 128, 75]), np.array([170, 255, 255])),
             # green
-            (numpy.array([65, 128, 192]), numpy.array([105, 255, 255])),
+            (np.array([33, 100, 75]), np.array([70, 255, 255])),
             # blue
-            (numpy.array([135, 128, 192]), numpy.array([190, 255, 255])),
+            (np.array([67, 128, 75]), np.array([110, 255, 255])),
         ]
 
         centers = []
 
         for lower, upper in color_ranges:
-            mask = cv2.inRange(image, lower, upper)
-            center = cv2.moments(mask)
+            mask = cv2.inRange(hsv, lower, upper)
+            M = cv2.moments(mask)
 
             if M['m00'] > 100:
                 # center of the yellow pixels in the image
@@ -98,20 +100,28 @@ class RobotMover:
 
         corners, ids, rejected_points = cv2.aruco.detectMarkers(grayscale_image, self.aruco_dict)
 
-        self.tag_centers = [(corners[i, 0, 0] + corners[i, 0, 2]) / 2 for i in range(corners.shape[0])]
-        self.tag_ids = ids[:, 0]
+        self.tag_centers = [(corners[i][0, 0] + corners[i][0, 2]) / 2 for i in range(len(corners))]
+        if ids is None:
+            self.tag_ids = []
+        else:
+            self.tag_ids = ids[:, 0]
 
     def image_callback(self, msg):
-        print("got image")
+        #print("got image")
         if not msg.data:
             # no image
+            print("no image")
             return
 
         self.img_width = msg.width
 
         image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
 
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, np.array([67, 100, 75]), np.array([110, 255, 255]))
+
         cv2.imshow("window", image)
+        cv2.imshow("window", mask)
         cv2.waitKey(3)
 
         self.set_colored_object_centers(image)
@@ -125,8 +135,9 @@ class RobotMover:
     def move_object(self, color_id, tag_id):
         center = self.colored_centers[color_id]
         # go in front of object
+        print("Robot mover: Approaching object")
         r = rospy.Rate(10)
-        while not (abs(center[1] - self.img_width / 2) < 10 and abs(self.front_distance - 0.2) < 0.02):
+        while not (abs(center[0] - self.img_width / 2) < 10 and abs(self.front_distance - 0.2) < 0.02):
             center = self.colored_centers[color_id]
 
             if center == (-1, -1):
@@ -136,25 +147,34 @@ class RobotMover:
             else:
                 # move towards object
                 # proportional control for forward and angle
-                lin = Vector3((self.front_distance - 0.2) * 0.1, 0.0, 0.0)
-                ang = Vector3(0.0, 0.0, (self.img_width / 2 - center[1]) * 0.5)
+                lin = Vector3((self.front_distance - 0.2) * 0.2, 0.0, 0.0)
+                ang = Vector3(0.0, 0.0, (self.img_width / 2 - center[0]) * 0.01)
             twist = Twist(linear=lin, angular=ang)
             self.vel_pub.publish(twist)
 
             r.sleep()
 
-        #self.claw_grab()
+        lin = Vector3(0.0, 0.0, 0.0)
+        ang = Vector3(0.0, 0.0, 0.0)
+        twist = Twist(linear=lin, angular=ang)
+        self.vel_pub.publish(twist)
 
+        print("Robot mover: grabbing")
+        self.claw_grab()
+
+        print("Robot mover: moving to tag")
         # go to the tag
-        center = 0
-        while not (abs(center - self.img_width / 2) < 10 and abs(self.front_distance - 0.2) < 0.02):
+        center = (-1, -1)
+        while not (abs(center[0] - self.img_width / 2) < 10 and abs(self.front_distance - 0.4) < 0.02):
             try:
                 # move towards tag
-                tag_center = self.tag_centers[list(self.tag_ids).index(tag_id)]
+                center = self.tag_centers[list(self.tag_ids).index(tag_id)]
+                #print(f'centers are {self.tag_centers}')
+                #print(f'ids are {self.tag_ids}')
 
                 # proportional control for forward and angle
-                lin = Vector3((self.front_distance - 0.2) * 0.1, 0.0, 0.0)
-                ang = Vector3(0.0, 0.0, (self.img_width / 2 - center[1]) * 0.5)
+                lin = Vector3((self.front_distance - 0.4) * 0.2, 0.0, 0.0)
+                ang = Vector3(0.0, 0.0, (self.img_width / 2 - center[0]) * 0.01)
                 twist = Twist(linear=lin, angular=ang)
                 self.vel_pub.publish(twist)
             except ValueError:
@@ -166,12 +186,20 @@ class RobotMover:
 
             r.sleep()
 
-        #self.claw_open()
+        lin = Vector3(0.0, 0.0, 0.0)
+        ang = Vector3(0.0, 0.0, 0.0)
+        twist = Twist(linear=lin, angular=ang)
+        self.vel_pub.publish(twist)
+
+        print("Robot mover: putting down")
+        self.claw_open()
+
+        print("Robot mover: task finished")
     
     def claw_grab(self):
         # controls the arm joints
         # intention: have the second arm join to move forward so that the gripper is in front of the bot
-        arm_joint_goal = [0.0, math.radians(45), 0.0, math.radians(45)]
+        arm_joint_goal = [0.0, 0.0, math.radians(20.0), math.radians(-20.0)]
         self.move_group_arm.go(arm_joint_goal, wait=True)
         rospy.sleep(3.0)
         # Calling ``stop()`` ensures that there is no residual movement
@@ -182,12 +210,12 @@ class RobotMover:
         # unknown: how far the gripper is and how tight the gripper is on the object
         gripper_joint_goal = [-0.01, -0.01]
         self.move_group_gripper.go(gripper_joint_goal, wait=True)
-        rospy.sleep(3.0)
+        rospy.sleep(1.0)
         self.move_group_gripper.stop()
 
         # controls arm joints to move up
         # intention: have the third arm joint to move upwards 
-        arm_joint_goal = [0.0, 0.0, -math.radians(53), -math.radians(90)]
+        arm_joint_goal = [0.0, math.radians(-40.0), math.radians(-40.0), math.radians(-90.0)]
         self.move_group_arm.go(arm_joint_goal, wait=True)
         rospy.sleep(3.0)
         # Calling ``stop()`` ensures that there is no residual movement
@@ -195,20 +223,25 @@ class RobotMover:
 
     def claw_open(self):
         # controls the arm joints
-        arm_joint_goal = [0.0, 0.0, math.radians(53), -math.raidans(90)]
+        arm_joint_goal = [0.0, 0.0, math.radians(20.0), math.radians(-20.0)]
         self.move_group_arm.go(arm_joint_goal, wait=True)
-        rospy.sleep(3.0)
+        rospy.sleep(4.0)
         # Calling ``stop()`` ensures that there is no residual movement
         self.move_group_arm.stop()
 
         # Controls the gripper
         # intention: open gripper
-        gripper_joint_goal = [-0.009, 0.009]
+        gripper_joint_goal = [0.01, 0.01]
         self.move_group_gripper.go(gripper_joint_goal, wait=True)
-        rospy.sleep(3.0)
+        rospy.sleep(1.0)
         self.move_group_gripper.stop()
 
         # maybe have the robot back out after dropping the object
+        self.move_group_arm.go([0.0, 
+                                math.radians(-60.0), 
+                                math.radians(60.0),
+                                math.radians(0.0)], wait=True)
+        rospy.sleep(2.0)
 
 
 
@@ -223,6 +256,7 @@ class RobotMover:
         tag = data.tag_id
 
         self.move_object(color, tag)
+        print("Action done")
 
         # Signifies that the whole movement is finished
         self.reward_pub.publish(reward = 1)
