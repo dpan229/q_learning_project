@@ -1,7 +1,4 @@
 <launch>
-  <!-- Start up reset_world -->
-  <node name="reset_world_q_learning" pkg="q_learning_project" type="reset_world.py" />
-
   <!-- Start up robot_mover -->
   <node name="robot_mover_q_learning" pkg="q_learning_project" type="robot_mover.py" />
 

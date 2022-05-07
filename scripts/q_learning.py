@@ -214,6 +214,6 @@ class QLearning(object):
 if __name__ == "__main__":
     mode = "train" if "--train" in sys.argv else "exec"
     node = QLearning(mode)
-    sleep(1.0)
+    sleep(2.0)
     node.begin()
     rospy.spin()
