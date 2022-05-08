@@ -167,7 +167,7 @@ class QLearning(object):
 
         # convert q_matrix into a QMatrix object
         q_matrix_obj = QMatrix()
-        q_matrix_obj.q_matrix = [QMatrixRow(row) for row in self.q_matrix]
+        q_matrix_obj.q_matrix = [QMatrixRow(list(row.astype(int))) for row in self.q_matrix]
 
         self.matrix_publisher.publish(q_matrix_obj)
 

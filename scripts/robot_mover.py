@@ -42,7 +42,6 @@ class RobotMover:
         self.colored_centers = [(-1, -1) for _ in range(3)]
         self.tag_centers = []
         self.tag_ids = []
-        self.front_distances = [1.0 for _ in range(1)]
         self.front_distance = 1.0
 
         self.img_width = 100
@@ -69,15 +68,23 @@ class RobotMover:
             # pink
             (np.array([150, 128, 75]), np.array([170, 255, 255])),
             # green
-            (np.array([33, 100, 75]), np.array([70, 255, 255])),
+            (np.array([40, 100, 75]), np.array([70, 255, 255])),
             # blue
-            (np.array([67, 128, 75]), np.array([110, 255, 255])),
+            (np.array([67, 100, 60]), np.array([110, 255, 255])),
         ]
 
         centers = []
 
         for lower, upper in color_ranges:
             mask = cv2.inRange(hsv, lower, upper)
+
+            # this limits our search scope to only view a slice of the image near the ground
+            h, w, d = image.shape
+            search_top = int(h/2)
+            search_bot = int(h)
+            mask[0:search_top, 0:w] = 0
+            mask[search_bot:h, 0:w] = 0
+
             M = cv2.moments(mask)
 
             if M['m00'] > 100:
@@ -129,15 +136,14 @@ class RobotMover:
         self.set_tag_centers(image)
 
     def scan_callback(self, data):
-        self.front_distances = [data.ranges[0]] + self.front_distances[1:]
-        self.front_distance = np.mean(self.front_distances)
+        self.front_distance = np.mean([data.ranges[i] for i in [0, 1, 2, 359, 358]])
     
     def move_object(self, color_id, tag_id):
         center = self.colored_centers[color_id]
         # go in front of object
         print("Robot mover: Approaching object")
         r = rospy.Rate(10)
-        while not (abs(center[0] - self.img_width / 2) < 10 and abs(self.front_distance - 0.2) < 0.02):
+        while not (abs(center[0] - self.img_width / 2) < 10 and abs(self.front_distance - 0.15) < 0.02):
             center = self.colored_centers[color_id]
 
             if center == (-1, -1):
@@ -147,7 +153,7 @@ class RobotMover:
             else:
                 # move towards object
                 # proportional control for forward and angle
-                lin = Vector3((self.front_distance - 0.2) * 0.2, 0.0, 0.0)
+                lin = Vector3(min((self.front_distance - 0.15) * 0.4, 0.5), 0.0, 0.0)
                 ang = Vector3(0.0, 0.0, (self.img_width / 2 - center[0]) * 0.01)
             twist = Twist(linear=lin, angular=ang)
             self.vel_pub.publish(twist)
@@ -165,7 +171,7 @@ class RobotMover:
         print("Robot mover: moving to tag")
         # go to the tag
         center = (-1, -1)
-        while not (abs(center[0] - self.img_width / 2) < 10 and abs(self.front_distance - 0.4) < 0.02):
+        while not (abs(center[0] - self.img_width / 2) < 10 and abs(self.front_distance - 0.5) < 0.02):
             try:
                 # move towards tag
                 center = self.tag_centers[list(self.tag_ids).index(tag_id)]
@@ -173,7 +179,7 @@ class RobotMover:
                 #print(f'ids are {self.tag_ids}')
 
                 # proportional control for forward and angle
-                lin = Vector3((self.front_distance - 0.4) * 0.2, 0.0, 0.0)
+                lin = Vector3(min((self.front_distance - 0.5) * 0.4, 0.5), 0.0, 0.0)
                 ang = Vector3(0.0, 0.0, (self.img_width / 2 - center[0]) * 0.01)
                 twist = Twist(linear=lin, angular=ang)
                 self.vel_pub.publish(twist)
@@ -215,7 +221,7 @@ class RobotMover:
 
         # controls arm joints to move up
         # intention: have the third arm joint to move upwards 
-        arm_joint_goal = [0.0, math.radians(-40.0), math.radians(-40.0), math.radians(-90.0)]
+        arm_joint_goal = [0.0, math.radians(-60.0), math.radians(50.0), math.radians(-90.0)]
         self.move_group_arm.go(arm_joint_goal, wait=True)
         rospy.sleep(3.0)
         # Calling ``stop()`` ensures that there is no residual movement
@@ -223,9 +229,9 @@ class RobotMover:
 
     def claw_open(self):
         # controls the arm joints
-        arm_joint_goal = [0.0, 0.0, math.radians(20.0), math.radians(-20.0)]
+        arm_joint_goal = [0.0, math.radians(30.0), math.radians(-30.0), math.radians(-15.0)]
         self.move_group_arm.go(arm_joint_goal, wait=True)
-        rospy.sleep(4.0)
+        rospy.sleep(5.0)
         # Calling ``stop()`` ensures that there is no residual movement
         self.move_group_arm.stop()
 
