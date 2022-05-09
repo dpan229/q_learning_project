@@ -127,3 +127,6 @@ After the training is complete, the optimal path is executed by always
 picking the action that has the largest associated value from the current 
 state in the Q-matrix. This is implemented in the `receive_reward_execute`
 callback function in `q_learning.py`.
+
+
+![q_learning](mover.gif)
