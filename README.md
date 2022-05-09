@@ -121,7 +121,7 @@ to have converged and end the training. This is also implemented in the
 `QLearning.receive_reward_train` callback function with some variables set up
 in the `QLearning` initialization function.
 
-### Executing the path most likely to lead to a reward after the Q-matrix has converged
+#### Executing the path most likely to lead to a reward after the Q-matrix has converged
 
 After the training is complete, the optimal path is executed by always
 picking the action that has the largest associated value from the current 
@@ -130,38 +130,37 @@ callback function in `q_learning.py`.
 
 ### Robot Perception Description
 
-## Identifying the locations and identities of each of the colored objects:
+#### Identifying the locations and identities of each of the colored objects:
 * We identified a range of colors for pink, green, and blue first. This required encompassing a range where the robot can recognize when the object is in the shadow to when the object is in the light. After it identifies an object with this range, it finds the middle of all the pixels that contain this color and moves towards that pixel with the incorporation of sound
 
-Identifying the locations and identities of each of the AR tags:
+#### Identifying the locations and identities of each of the AR tags:
 * To identify the AR tags, we used the provided library RobotMoveObjectToTag. Like the colored object, we identified the middle of the tag and moved towards it with the consideration of noise.
 
 ### Robot Manipulation and Movement
-Robot manipulation and movement: Describe how you accomplished each of the following components of the robot manipulation and movement elements of this project in 1-3 sentences, and also describe what functions / sections of the code executed each of these components (1-3 sentences per function / portion of code):
-## Moving to the right spot in order to pick up a colored object
+#### Moving to the right spot in order to pick up a colored object
 * implemented in `move_object()` on line 146
 * It first rotates masks the robot's camera so it only recognizes a range of colors in `image_callback` (line 116). After seeing the colors that fall in that range, it averages all the pixels with colors in that range and finds where the center of the color object is (line 146). Then it moves towards it until it reaches a certain distance (1.5m) to stop right in front of the object to pick it up.
 
-## Picking up the colored object
+#### Picking up the colored object
 * implemented in `claw_grab()` on line 205.
 * We used moveit_commander in order to rotate the joints so that it ins in position to grab. It will first extend its arm (line 208). Once it reaches out far enough to cover the distance between the bot and the object, it grippens its claw (line line 217) and lifts it up out of camera view (line 224).
 
-## Moving to the desired destination (AR tag) with the colored object
+#### Moving to the desired destination (AR tag) with the colored object
 * implemented in `move_object()` on line 173.
 * After grabbing the object, the robot recognizes the tag using RobotMoveToTag, identify the center of the tag (line 105), and uses Twist to move accordingly to which tag the q_learning tells the robot to drop the object at.
 
-## Putting the colored object back down at the desired destination
+#### Putting the colored object back down at the desired destination
 * implemented in `claw_open()` on line 230.
 * like `claw_grab()`, we used moveit_commander to rotate the joints and control claw. It first brings the arm down (line 232), opens the gripper to drop the object (line 240) and have the robot retreive it's arm so that it doesn't hit the object when it rotates for the next task.
 
-#### Challenges
+### Challenges
 The challenges we faced during this project is organizing the joint angles such that it wouldn't get in the way of the camera, setting up the camera for the robot for debugging, and understanding the data structures needed for certain variables. For the joint angles, we tested both positive and negative angles to see how the robot arm would react until we know how the joints move. As for the camera, we used lab b to reflect what we needed to include in our code but had to do some adjustments based on the TA's response to use on slack as for what was going on and why our camera did not work. Lastly, for the data structures, we simply looked at error which referred us to the line where a data structure did not work. Then we looked through documentation and reasoning for what to change or assert our variables to be and change it accordingly.
 
-#### Future Work
+### Future Work
 If I had more time, I would figure out a way to help the robots recognize the tags at sharper angles. As of now, the robot does not seem to be able to recognize the tags when it's at a close to 30 degree angle.
 
-#### Takeaways
+### Takeaways
 Takeaways (at least 2 bullet points with 2-3 sentences per bullet point): What are your key takeaways from this project that would help you/others in future robot programming assignments working in pairs? For each takeaway, provide a few sentences of elaboration.
 
-#### GIF
+### GIF
 ![q_learning](mover.gif)
