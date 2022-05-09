@@ -121,14 +121,14 @@ to have converged and end the training. This is also implemented in the
 `QLearning.receive_reward_train` callback function with some variables set up
 in the `QLearning` initialization function.
 
-#### Executing the path most likely to lead to a reward after the Q-matrix has converged
+### Executing the path most likely to lead to a reward after the Q-matrix has converged
 
 After the training is complete, the optimal path is executed by always
 picking the action that has the largest associated value from the current 
 state in the Q-matrix. This is implemented in the `receive_reward_execute`
 callback function in `q_learning.py`.
 
-#### Robot Perception Description
+### Robot Perception Description
 
 ## Identifying the locations and identities of each of the colored objects:
 * We identified a range of colors for pink, green, and blue first. This required encompassing a range where the robot can recognize when the object is in the shadow to when the object is in the light. After it identifies an object with this range, it finds the middle of all the pixels that contain this color and moves towards that pixel with the incorporation of sound
@@ -136,7 +136,7 @@ callback function in `q_learning.py`.
 Identifying the locations and identities of each of the AR tags:
 * To identify the AR tags, we used the provided library RobotMoveObjectToTag. Like the colored object, we identified the middle of the tag and moved towards it with the consideration of noise.
 
-#### Robot Manipulation and Movement
+### Robot Manipulation and Movement
 Robot manipulation and movement: Describe how you accomplished each of the following components of the robot manipulation and movement elements of this project in 1-3 sentences, and also describe what functions / sections of the code executed each of these components (1-3 sentences per function / portion of code):
 ## Moving to the right spot in order to pick up a colored object
 * implemented in `move_object()` on line 146
@@ -157,14 +157,11 @@ Robot manipulation and movement: Describe how you accomplished each of the follo
 #### Challenges
 The challenges we faced during this project is organizing the joint angles such that it wouldn't get in the way of the camera, setting up the camera for the robot for debugging, and understanding the data structures needed for certain variables. For the joint angles, we tested both positive and negative angles to see how the robot arm would react until we know how the joints move. As for the camera, we used lab b to reflect what we needed to include in our code but had to do some adjustments based on the TA's response to use on slack as for what was going on and why our camera did not work. Lastly, for the data structures, we simply looked at error which referred us to the line where a data structure did not work. Then we looked through documentation and reasoning for what to change or assert our variables to be and change it accordingly.
 
-
 #### Future Work
 If I had more time, I would figure out a way to help the robots recognize the tags at sharper angles. As of now, the robot does not seem to be able to recognize the tags when it's at a close to 30 degree angle.
 
 #### Takeaways
 Takeaways (at least 2 bullet points with 2-3 sentences per bullet point): What are your key takeaways from this project that would help you/others in future robot programming assignments working in pairs? For each takeaway, provide a few sentences of elaboration.
-
-
 
 #### GIF
 ![q_learning](mover.gif)
